@@ -2,7 +2,15 @@ import pool from './db.js';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request) {
+  const url = new URL(request.url);
+  const path = url.pathname;
+  
+  // Only handle /api/projects
+  if (path !== '/api/projects') {
+    return Response.json({ error: 'Not found' }, { status: 404 });
+  }
+  
   try {
     const result = await pool.query(
       'SELECT id, title, description, image, tags, link, category FROM projects'

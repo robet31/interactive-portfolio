@@ -2,7 +2,15 @@ import pool from './db.js';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request) {
+  const url = new URL(request.url);
+  const path = url.pathname;
+  
+  // Only handle /api/certifications
+  if (path !== '/api/certifications') {
+    return Response.json({ error: 'Not found' }, { status: 404 });
+  }
+  
   try {
     const result = await pool.query(
       'SELECT id, name, organization, issue_date, expiry_date, credential_id, credential_url, image, skills FROM certifications'
