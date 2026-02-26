@@ -1,15 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Github, Linkedin, Mail } from 'lucide-react';
+import { FaInstagram, FaWhatsapp } from 'react-icons/fa';
 import { Button } from '../ui/button';
 import { motion, AnimatePresence } from 'motion/react';
 import logo from '../../../assets/Logo_Ravnx.png';
+import { getSettingsFromDb, type SiteSettings } from '../../lib/db';
 
 export function Navbar() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [settings, setSettings] = useState<SiteSettings | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    getSettingsFromDb().then(setSettings);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -34,10 +41,42 @@ export function Navbar() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [isOpen]);
 
+  const phoneNumber = settings?.whatsapp_number || '6281515450611';
+  const whatsappMessage = settings?.whatsapp_message || 'Hai min, aku interested sama project kamu nih. Bisa jelasin lebih lanjut?';
+  const email = settings?.email || 'api@portfolio.dev';
+
+  const socialLinks = [
+    {
+      href: settings?.github_url || 'https://github.com/robet31',
+      icon: Github,
+      label: 'GitHub',
+    },
+    {
+      href: settings?.linkedin_url || 'https://www.linkedin.com/in/arraffi-abqori-nur-azizi/',
+      icon: Linkedin,
+      label: 'LinkedIn',
+    },
+    {
+      href: settings?.instagram_url || 'https://www.instagram.com/ravnxx_/',
+      icon: FaInstagram,
+      label: 'Instagram',
+    },
+    {
+      href: `https://wa.me/${phoneNumber}?text=${encodeURIComponent(whatsappMessage)}`,
+      icon: FaWhatsapp,
+      label: 'WhatsApp',
+    },
+    {
+      href: `mailto:${email}`,
+      icon: Mail,
+      label: 'Email',
+    },
+  ];
+
   const navLinks = [
-    { href: '/', label: 'Home' },
-    { href: '/blog', label: 'Blog' },
-    { href: '/daily-logs', label: 'Daily Logs' },
+    { href: '/', label: settings?.nav_home || 'Home' },
+    { href: '/blog', label: settings?.nav_blog || 'Blog' },
+    { href: '/daily-logs', label: settings?.nav_daily_logs || 'Daily Logs' },
   ];
 
   const isActive = (path: string) => {
@@ -59,12 +98,15 @@ export function Navbar() {
           {/* Logo + Nama */}
           <Link to="/" className="flex items-center gap-2 group">
             <img 
-              src={logo} 
-              alt="Ravnx" 
-              className="h-8 w-8 object-contain"
+              src={settings?.profile_image || logo} 
+              alt={settings?.site_name || 'Ravnx'} 
+              className="h-8 w-8 object-contain rounded-full"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = logo;
+              }}
             />
             <span className="text-foreground tracking-tight transition-transform group-hover:scale-105" style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-              Ravnx<span className="text-primary">.</span>
+              {settings?.site_name || 'Ravnx.'}<span className="text-primary">.</span>
             </span>
           </Link>
 
@@ -83,6 +125,25 @@ export function Navbar() {
                 {link.label}
               </Link>
             ))}
+            
+            {/* Social Icons */}
+            <div className="flex items-center gap-1 ml-2 pl-2 border-l border-border">
+              {socialLinks.map((social) => {
+                const Icon = social.icon;
+                return (
+                  <a
+                    key={social.label}
+                    href={social.href}
+                    target={social.href.startsWith('mailto') || social.href.startsWith('https://wa') ? undefined : '_blank'}
+                    rel={social.href.startsWith('mailto') || social.href.startsWith('https://wa') ? undefined : 'noopener noreferrer'}
+                    aria-label={social.label}
+                    className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  >
+                    <Icon className="w-4 h-4" />
+                  </a>
+                );
+              })}
+            </div>
           </div>
 
           {/* Mobile menu button */}
@@ -148,10 +209,32 @@ export function Navbar() {
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     }`}
                   >
-                    <span className="text-sm">{link.label}</span>
+                <span className="text-sm">{link.label}</span>
                   </Link>
                 </motion.div>
-            ))}
+              ))}
+              
+              {/* Social Icons - Mobile */}
+              <div className="flex items-center gap-2 pt-3 mt-2 border-t border-border">
+                {socialLinks.map((social, i) => {
+                  const Icon = social.icon;
+                  return (
+                    <motion.a
+                      key={social.label}
+                      href={social.href}
+                      target={social.href.startsWith('mailto') || social.href.startsWith('https://wa') ? undefined : '_blank'}
+                      rel={social.href.startsWith('mailto') || social.href.startsWith('https://wa') ? undefined : 'noopener noreferrer'}
+                      aria-label={social.label}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: 0.3 + i * 0.05 }}
+                      className="flex items-center justify-center p-2.5 rounded-xl bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Icon className="w-4 h-4" />
+                    </motion.a>
+                  );
+                })}
+              </div>
             </div>
           </motion.div>
         )}

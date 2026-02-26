@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Briefcase, GraduationCap, Award, X, Plus, Building2, Heart, Users, ArrowUpDown, Info, Star, ImagePlus, Trash2, Loader2 } from 'lucide-react';
+import { Briefcase, GraduationCap, Award, X, Plus, Building2, Heart, Users, ArrowUpDown, Info, Star, ImagePlus, Trash2, Loader2, Sparkles } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,7 @@ import {
 } from '../ui/tooltip';
 import type { Experience, ExperienceType } from '../../lib/types';
 import { ImageUploadField } from './image-upload-field';
+import { generateExperienceFromImage, type GeneratedExperience } from '../../lib/ai-service';
 
 interface ExperienceFormDialogProps {
   open: boolean;
@@ -62,8 +63,34 @@ export function ExperienceFormDialog({
   const [images, setImages] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState('0');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const isEditing = !!experience;
+
+  const handleAIGenerate = async () => {
+    const imageUrl = images.length > 0 ? images[0] : image;
+    if (!imageUrl) {
+      alert('Silakan upload gambar dulu sebelum menggunakan AI Generate');
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const result: GeneratedExperience = await generateExperienceFromImage(imageUrl);
+      
+      if (result.title) setTitle(result.title);
+      if (result.organization) setOrganization(result.organization);
+      if (result.period) setPeriod(result.period);
+      if (result.description) setDescription(result.description);
+      if (result.type) setType(result.type as ExperienceType);
+      if (result.tags && result.tags.length > 0) setTags(result.tags);
+    } catch (error) {
+      console.error('AI Generation error:', error);
+      alert('Gagal generate dari gambar. Silakan isi form secara manual.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   useEffect(() => {
     if (experience) {
@@ -387,6 +414,33 @@ export function ExperienceFormDialog({
               </div>
               <p className="text-[10px] text-muted-foreground">
                 First image will be used as cover. Click to add more images.
+              </p>
+            </div>
+
+            {/* AI Generate Section - Always visible */}
+            <div className="space-y-3 p-4 rounded-lg border border-violet-500/30 bg-violet-500/5">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium text-violet-400">🤖 AI Auto Fill</Label>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAIGenerate}
+                  disabled={isGenerating || (!image && !isGenerating)}
+                  className="flex-1 gap-2 bg-violet-500/10 border-violet-500/30 hover:bg-violet-500/20"
+                >
+                  {isGenerating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4 text-violet-400" />
+                  )}
+                  <span className="text-sm">Generate Sekarang</span>
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground text-center">
+                AI akan mengisi form berdasarkan gambar yang diupload
               </p>
             </div>
 

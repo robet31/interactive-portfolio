@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Link2 } from 'lucide-react';
+import { X, Plus, Link2, Loader2, Sparkles, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
+import { Textarea } from '../ui/textarea';
 import {
   Select,
   SelectContent,
@@ -21,6 +22,8 @@ import {
 } from '../ui/select';
 import type { Project } from '../../lib/types';
 import { ImageUploadField } from './image-upload-field';
+import { generateProjectFromImage, generateProjectFromText, type GeneratedProject } from '../../lib/ai-service';
+import { toast } from 'sonner';
 
 interface ProjectFormDialogProps {
   open: boolean;
@@ -52,8 +55,46 @@ export function ProjectFormDialog({
   const [link, setLink] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateMode, setGenerateMode] = useState<'image' | 'text'>('text');
+  const [projectText, setProjectText] = useState('');
+  const [showTextInput, setShowTextInput] = useState(false);
 
   const isEditing = !!project;
+
+  const handleAIGenerate = async () => {
+    setIsGenerating(true);
+    
+    try {
+      let result: GeneratedProject;
+      
+      if (generateMode === 'image') {
+        if (!image) {
+          alert('Silakan upload gambar dulu');
+          return;
+        }
+        result = await generateProjectFromImage(image);
+      } else {
+        if (!projectText.trim()) {
+          alert('Silakan masukkan deskripsi project terlebih dahulu');
+          return;
+        }
+        result = await generateProjectFromText(projectText);
+      }
+      
+      if (result.title) setTitle(result.title);
+      if (result.description) setDescription(result.description);
+      if (result.category) setCategory(result.category);
+      if (result.tags && result.tags.length > 0) setTags(result.tags);
+      
+      toast.success('Berhasil generate data project!');
+    } catch (error) {
+      console.error('AI Generation error:', error);
+      toast.error('Gagal generate. Silakan isi form secara manual.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   useEffect(() => {
     if (project) {
@@ -178,17 +219,80 @@ export function ProjectFormDialog({
               placeholder="Describe the project, what it does, and technologies used..."
               value={description}
               onChange={e => setDescription(e.target.value)}
-              className="flex w-full rounded-md border border-input bg-input-background px-3 py-2 text-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 resize-y"
             />
           </div>
 
           {/* Cover Image */}
           <ImageUploadField
-            label="Cover Image"
+            label="Cover Image (Optional)"
             id="proj-image"
             value={image}
             onChange={setImage}
           />
+
+          {/* AI Generate Section - Always visible for new entries */}
+          <div className="space-y-3 p-4 rounded-lg border border-violet-500/30 bg-violet-500/5">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium text-violet-400">🤖 AI Auto Fill</Label>
+              <button
+                type="button"
+                onClick={() => setShowTextInput(!showTextInput)}
+                className="text-xs text-violet-500 hover:text-violet-400 flex items-center gap-1"
+              >
+                {showTextInput ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                {showTextInput ? 'Sembunyikan' : 'Gunakan teks'}
+              </button>
+            </div>
+
+            {showTextInput && (
+              <div className="space-y-2">
+                <Textarea
+                  placeholder="Masukkan deskripsi project di sini...&#10;Contoh:&#10;Smart Agriculture IoT Dashboard&#10;Dashboard untuk monitoring tanaman menggunakan sensor IoT&#10;Tech: React, Node.js, Python, MQTT"
+                  value={projectText}
+                  onChange={e => setProjectText(e.target.value)}
+                  className="min-h-[100px] text-sm"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Atau gunakan mode gambar di bawah
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setGenerateMode('text'); handleAIGenerate(); }}
+                disabled={isGenerating || (!projectText.trim() && generateMode === 'text')}
+                className="flex-1 gap-2 bg-violet-500/10 border-violet-500/30 hover:bg-violet-500/20"
+              >
+                {isGenerating && generateMode === 'text' ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FileText className="w-4 h-4 text-violet-400" />
+                )}
+                <span className="text-sm">dari Teks</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setGenerateMode('image'); handleAIGenerate(); }}
+                disabled={isGenerating || !image}
+                className="flex-1 gap-2 bg-violet-500/10 border-violet-500/30 hover:bg-violet-500/20"
+              >
+                {isGenerating && generateMode === 'image' ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4 text-violet-400" />
+                )}
+                <span className="text-sm">dari Gambar</span>
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground text-center">
+              AI akan mengisi form berdasarkan teks atau gambar
+            </p>
+          </div>
 
           {/* Tags */}
           <div className="space-y-2">

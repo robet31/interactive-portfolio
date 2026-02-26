@@ -34,7 +34,7 @@ function formatTime(date: Date) {
 function ChatBubble({ message, onSaveAsArticle }: { message: ChatMessage; onSaveAsArticle?: (html: string) => void }) {
   const [copied, setCopied] = useState(false);
   const isUser = message.role === 'user';
-  const isHTML = message.content.includes('<h2') || message.content.includes('<h3');
+  const isHTML = message.content.includes('<h2') || message.content.includes('<h3') || message.content.includes('<p>') || message.content.includes('<ul>') || message.content.includes('<blockquote');
 
   const handleCopy = () => {
     try {
@@ -109,7 +109,11 @@ function ChatBubble({ message, onSaveAsArticle }: { message: ChatMessage; onSave
                         Generated Log Entry
                       </div>
                       <div
-                        className="article-content prose-sm max-w-none [&_h2]:!text-base [&_h2]:!mt-3 [&_h2]:!mb-2 [&_h3]:!text-sm [&_h3]:!mt-2 [&_h3]:!mb-1 [&_p]:!text-xs [&_p]:!mb-2 [&_li]:!text-xs [&_code]:!text-[10px] [&_pre]:!text-[10px] [&_pre]:!my-2 [&_blockquote]:!text-xs [&_blockquote]:!py-2 [&_blockquote]:!px-3 [&_blockquote]:!my-2"
+                        className="article-content text-xs leading-relaxed"
+                        style={{
+                          fontFamily: 'var(--font-serif)',
+                          lineHeight: '1.7',
+                        }}
                         dangerouslySetInnerHTML={{ __html: message.content }}
                       />
                     </div>
@@ -285,13 +289,45 @@ export function LogGeneratorPage() {
     }
   };
 
+  // Convert markdown to HTML
+  const convertMarkdownToHTML = (content: string): string => {
+    if (!content) return content;
+    
+    let html = content;
+    
+    // Convert headers - must be done first before other conversions
+    // ## Heading -> <h2>Heading</h2>
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    // ### Heading -> <h3>Heading</h3>
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    // #### Heading -> <h4>Heading</h4>
+    html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+    
+    // Convert bold/italic
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    
+    // Convert line breaks to paragraphs (double newline)
+    html = html.replace(/\n\n+/g, '</p><p>');
+    
+    // Wrap content that doesn't start with a tag
+    if (!html.trim().startsWith('<')) {
+      html = '<p>' + html + '</p>';
+    }
+    
+    return html;
+  };
+
   const handleTemplateClick = (template: (typeof LOG_TEMPLATES)[number]) => {
     sendMessage(template.prompt);
   };
 
   const handleSaveAsArticle = useCallback(
     async (html: string) => {
-      const titleMatch = html.match(/<h2[^>]*>(.*?)<\/h2>/);
+      // Convert any markdown to HTML before saving
+      const convertedContent = convertMarkdownToHTML(html);
+      
+      const titleMatch = convertedContent.match(/<h2[^>]*>(.*?)<\/h2>/);
       const title = titleMatch
         ? titleMatch[1].replace(/<[^>]*>/g, '')
         : `Daily Log - ${new Date().toLocaleDateString('id-ID')}`;
@@ -299,11 +335,11 @@ export function LogGeneratorPage() {
       const newPost = await createPostInDb({
         title,
         slug: title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-'),
-        content: html,
+        content: convertedContent,
         category: 'Daily Log',
         status: 'draft',
         excerpt: `Log harian: ${title}`,
-        reading_time: Math.max(1, Math.ceil(html.replace(/<[^>]*>/g, '').split(/\s+/).length / 200)),
+        reading_time: Math.max(1, Math.ceil(convertedContent.replace(/<[^>]*>/g, '').split(/\s+/).length / 200)),
       });
 
       toast.success('Log saved as draft! Redirecting to editor...');

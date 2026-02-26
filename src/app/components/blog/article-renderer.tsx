@@ -10,11 +10,13 @@ export function ArticleRenderer({ content }: ArticleRendererProps) {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // Add syntax highlighting to code blocks
     const codeBlocks = containerRef.current.querySelectorAll('pre code');
     codeBlocks.forEach(block => {
       block.classList.add('hljs');
     });
 
+    // Handle images - ensure proper display
     const images = containerRef.current.querySelectorAll('img');
     images.forEach(img => {
       const el = img as HTMLImageElement;
@@ -31,6 +33,15 @@ export function ArticleRenderer({ content }: ArticleRendererProps) {
       }
     });
   }, [content]);
+
+  // If content is empty or undefined, show placeholder
+  if (!content || content.trim() === '') {
+    return (
+      <div className="text-muted-foreground italic">
+        No content yet. Start writing or generate with AI.
+      </div>
+    );
+  }
 
   return (
     <div

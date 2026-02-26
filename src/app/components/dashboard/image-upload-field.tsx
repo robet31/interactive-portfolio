@@ -3,6 +3,7 @@ import { Upload, Link as LinkIcon, X, ImageIcon, FileWarning } from 'lucide-reac
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
+import { playUploadSound } from '../../lib/sounds';
 
 interface ImageUploadFieldProps {
   label?: string;
@@ -63,6 +64,7 @@ export function ImageUploadField({
       reader.onload = () => {
         if (typeof reader.result === 'string') {
           onChange(reader.result);
+          playUploadSound();
         }
       };
       reader.onerror = () => {

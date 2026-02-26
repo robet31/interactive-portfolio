@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router';
-import { LayoutDashboard, FileText, PenSquare, LogOut, Terminal, ArrowLeft, Sparkles, Briefcase, FolderKanban, Award, Menu, X } from 'lucide-react';
+import { LayoutDashboard, FileText, PenSquare, LogOut, Terminal, ArrowLeft, Sparkles, Briefcase, FolderKanban, Award, Menu, X, Settings } from 'lucide-react';
 import { Button } from '../ui/button';
 import { getAuthState, logout } from '../../lib/store';
 import { motion, AnimatePresence } from 'motion/react';
 import logo from '../../../assets/Logo_Ravnx.png';
+import { ScrollToTop } from '../layout/scroll-to-top';
 
 export function DashboardLayout() {
   const navigate = useNavigate();
@@ -48,6 +49,7 @@ export function DashboardLayout() {
     { href: '/rapi/certifications', label: 'Certifications', icon: Award },
     { href: '/rapi/projects', label: 'Projects', icon: FolderKanban },
     { href: '/rapi/log-generator', label: 'AI Log', icon: Sparkles },
+    { href: '/rapi/settings', label: 'Settings', icon: Settings },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -153,6 +155,7 @@ export function DashboardLayout() {
       <main className="max-w-6xl mx-auto px-3 sm:px-6 py-6 sm:py-8">
         <Outlet />
       </main>
+      <ScrollToTop />
     </div>
   );
 }

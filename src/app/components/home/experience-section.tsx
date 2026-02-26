@@ -247,12 +247,25 @@ export function ExperienceSection() {
             </h2>
           </div>
           
-          {/* Simple Loading - Fast */}
-          <div className="flex items-center justify-center py-20">
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <span className="text-muted-foreground text-sm">Loading...</span>
-            </div>
+          <div className="space-y-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex gap-4">
+                <div className="flex flex-col items-center">
+                  <Skeleton className="w-12 h-12 rounded-full" />
+                  {i < 3 && <div className="w-0.5 flex-1 bg-border mt-2" />}
+                </div>
+                <div className="flex-1 space-y-3 pb-8">
+                  <Skeleton className="h-6 w-1/3" />
+                  <Skeleton className="h-4 w-1/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <div className="flex gap-2 pt-2">
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>

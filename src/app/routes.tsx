@@ -16,6 +16,7 @@ const ExperiencesPage = lazy(() => import('./pages/experiences-page').then(m => 
 const ProjectsManagementPage = lazy(() => import('./pages/projects-management-page').then(m => ({ default: m.ProjectsManagementPage })));
 const CertificationsPage = lazy(() => import('./pages/certifications-page').then(m => ({ default: m.CertificationsPage })));
 const DailyLogsPage = lazy(() => import('./pages/daily-logs-page').then(m => ({ default: m.DailyLogsPage })));
+const SettingsPage = lazy(() => import('./pages/settings-page').then(m => ({ default: m.SettingsPage })));
 
 export const router = createBrowserRouter([
   {
@@ -47,6 +48,7 @@ export const router = createBrowserRouter([
       { path: 'experiences', element: <ExperiencesPage /> },
       { path: 'certifications', element: <CertificationsPage /> },
       { path: 'projects', element: <ProjectsManagementPage /> },
+      { path: 'settings', element: <SettingsPage /> },
     ],
   },
   {

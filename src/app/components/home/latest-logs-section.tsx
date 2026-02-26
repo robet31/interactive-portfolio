@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { motion } from 'motion/react';
 import { ArrowRight, Clock, Terminal, CalendarDays } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Skeleton } from '../ui/skeleton';
 import { getPublishedPostsFromDb } from '../../lib/db';
 import { format } from 'date-fns';
 import type { Post } from '../../lib/types';
@@ -47,6 +48,22 @@ export function LatestLogsSection() {
               </h2>
             </div>
           </motion.div>
+          
+          <div className="grid gap-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border/60">
+                <Skeleton className="w-10 h-10 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-5 w-3/4" />
+                  <div className="flex gap-3">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+                <Skeleton className="w-6 h-6 rounded" />
+              </div>
+            ))}
+          </div>
         </div>
       </section>
     );

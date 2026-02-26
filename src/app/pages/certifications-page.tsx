@@ -9,11 +9,17 @@ import {
   ExternalLink,
   Calendar,
   X,
+  Loader2,
+  Sparkles,
+  FileText,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
+import { Textarea } from '../components/ui/textarea';
 import { ImageUploadField } from '../components/dashboard/image-upload-field';
 import {
   Dialog,
@@ -28,9 +34,12 @@ import {
   createCertificationInDb,
   updateCertificationInDb,
   deleteCertificationInDb,
+  clearCacheFor,
 } from '../lib/db';
 import type { Certification } from '../lib/types';
 import { toast } from 'sonner';
+import { playSuccessSound, playErrorSound } from '../lib/sounds';
+import { generateCertificationFromImage, generateCertificationFromText, type GeneratedCertification } from '../lib/ai-service';
 
 function formatDate(dateStr: string): string {
   if (!dateStr) return '';
@@ -69,8 +78,50 @@ function CertFormDialog({
   const [image, setImage] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateMode, setGenerateMode] = useState<'image' | 'text'>('text');
+  const [certText, setCertText] = useState('');
+  const [showTextInput, setShowTextInput] = useState(false);
 
   const isEditing = !!certification;
+
+  const handleAIGenerate = async () => {
+    setIsGenerating(true);
+    let errorMsg = '';
+    
+    try {
+      let result: GeneratedCertification;
+      
+      if (generateMode === 'image') {
+        if (!image) {
+          alert('Silakan upload gambar dulu');
+          return;
+        }
+        result = await generateCertificationFromImage(image);
+      } else {
+        if (!certText.trim()) {
+          alert('Silakan masukkan teks dari sertifikat terlebih dahulu');
+          return;
+        }
+        result = await generateCertificationFromText(certText);
+      }
+      
+      if (result.name) setName(result.name);
+      if (result.organization) setOrganization(result.organization);
+      if (result.issueDate) setIssueDate(result.issueDate);
+      if (result.expiryDate) setExpiryDate(result.expiryDate);
+      if (result.credentialId) setCredentialId(result.credentialId);
+      if (result.skills && result.skills.length > 0) setSkills(result.skills);
+      
+      toast.success('Berhasil generate data sertifikasi!');
+    } catch (error) {
+      errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('AI Generation error:', error);
+      toast.error(`Gagal generate: ${errorMsg}. Silakan isi form secara manual.`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   useEffect(() => {
     if (certification) {
@@ -194,11 +245,74 @@ function CertFormDialog({
           </div>
 
           <ImageUploadField
-            label="Image"
+            label="Image (Optional)"
             id="cert-image"
             value={image}
             onChange={setImage}
           />
+
+          {/* AI Generate Section - Always visible */}
+          <div className="space-y-3 p-4 rounded-lg border border-violet-500/30 bg-violet-500/5">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium text-violet-400">🤖 AI Auto Fill</Label>
+              <button
+                type="button"
+                onClick={() => setShowTextInput(!showTextInput)}
+                className="text-xs text-violet-500 hover:text-violet-400 flex items-center gap-1"
+              >
+                {showTextInput ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                {showTextInput ? 'Sembunyikan' : 'Gunakan teks'}
+              </button>
+            </div>
+
+            {showTextInput && (
+              <div className="space-y-2">
+                <Textarea
+                  placeholder="Paste teks dari sertifikat di sini...&#10;Contoh:&#10;Google Cloud Professional Data Engineer&#10;Diterbitkan oleh Google Cloud&#10;Tanggal: Januari 2024&#10;ID: abc123xyz"
+                  value={certText}
+                  onChange={e => setCertText(e.target.value)}
+                  className="min-h-[100px] text-sm"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Atau gunakan mode gambar di bawah
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setGenerateMode('text'); handleAIGenerate(); }}
+                disabled={isGenerating || (!certText.trim() && generateMode === 'text')}
+                className="flex-1 gap-2 bg-violet-500/10 border-violet-500/30 hover:bg-violet-500/20"
+              >
+                {isGenerating && generateMode === 'text' ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FileText className="w-4 h-4 text-violet-400" />
+                )}
+                <span className="text-sm">dari Teks</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { setGenerateMode('image'); handleAIGenerate(); }}
+                disabled={isGenerating || !image}
+                className="flex-1 gap-2 bg-violet-500/10 border-violet-500/30 hover:bg-violet-500/20"
+              >
+                {isGenerating && generateMode === 'image' ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4 text-violet-400" />
+                )}
+                <span className="text-sm">dari Gambar</span>
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground text-center">
+              AI akan mengisi form berdasarkan teks atau gambar
+            </p>
+          </div>
 
           <div className="space-y-2">
             <Label>Skills</Label>
@@ -261,7 +375,8 @@ export function CertificationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const refresh = useCallback(async () => {
-    const data = await getAllCertificationsFromDb();
+    clearCacheFor('certifications');
+    const data = await getAllCertificationsFromDb(true);
     setCertifications(data);
   }, []);
 
@@ -280,15 +395,19 @@ export function CertificationsPage() {
         const result = await updateCertificationInDb(editingCert.id, data);
         if (result) {
           toast.success('Certification updated!');
+          playSuccessSound();
         } else {
           toast.error('Failed to update certification');
+          playErrorSound();
         }
       } else {
         const result = await createCertificationInDb(data);
         if (result) {
           toast.success('Certification added!');
+          playSuccessSound();
         } else {
           toast.error('Failed to add certification');
+          playErrorSound();
         }
       }
       setEditingCert(null);
@@ -317,8 +436,10 @@ export function CertificationsPage() {
       const result = await deleteCertificationInDb(deletingId);
       if (result) {
         toast.success('Certification deleted.');
+        playSuccessSound();
       } else {
         toast.error('Failed to delete certification');
+        playErrorSound();
       }
       setDeleteDialogOpen(false);
       setDeletingId(null);

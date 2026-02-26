@@ -42,9 +42,11 @@ import {
   createExperienceInDb,
   updateExperienceInDb,
   deleteExperienceInDb,
+  clearCacheFor,
 } from '../lib/db';
 import type { Experience } from '../lib/types';
 import { toast } from 'sonner';
+import { playSuccessSound, playErrorSound } from '../lib/sounds';
 
 // Menambahkan ekstensi tipe lokal untuk mengatasi error TS 
 // (sebelum kamu sempat menambahkan sortOrder di file types.ts)
@@ -212,7 +214,8 @@ export function ExperiencesPage() {
   const [filterType, setFilterType] = useState<string>('all');
 
   const refresh = useCallback(async () => {
-    const data = await getAllExperiencesFromDb();
+    clearCacheFor('experiences');
+    const data = await getAllExperiencesFromDb(true);
     setExperiences(data);
   }, []);
 
@@ -232,17 +235,21 @@ export function ExperiencesPage() {
         const result = await updateExperienceInDb(editingExp.id, data);
         if (result) {
           toast.success('Experience updated!');
+          playSuccessSound();
           success = true;
         } else {
           toast.error('Failed to update experience');
+          playErrorSound();
         }
       } else {
         const result = await createExperienceInDb(data);
         if (result) {
           toast.success('Experience added!');
+          playSuccessSound();
           success = true;
         } else {
           toast.error('Failed to add experience');
+          playErrorSound();
         }
       }
       setEditingExp(null);
@@ -272,8 +279,10 @@ export function ExperiencesPage() {
       const result = await deleteExperienceInDb(deletingId);
       if (result) {
         toast.success('Experience deleted.');
+        playSuccessSound();
       } else {
         toast.error('Failed to delete experience');
+        playErrorSound();
       }
       setDeleteDialogOpen(false);
       setDeletingId(null);

@@ -1039,12 +1039,18 @@ export function TipTapEditor({ content, onChange }: TipTapEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorWrapperRef = useRef<HTMLDivElement>(null);
 
-  // Custom CodeBlock extension with Notion-style node view
+  // Custom CodeBlock extension with Notion-style node view and proper HTML parsing
   const CustomCodeBlockLowlight = useMemo(
     () =>
       CodeBlockLowlight.extend({
         addNodeView() {
           return ReactNodeViewRenderer(NotionCodeBlock);
+        },
+        parseHTML() {
+          return [
+            { tag: 'pre code' },
+            { tag: 'pre' },
+          ];
         },
       }),
     []
@@ -1088,6 +1094,14 @@ export function TipTapEditor({ content, onChange }: TipTapEditorProps) {
         heading: {
           levels: [1, 2, 3, 4, 5, 6],
         },
+        blockquote: {
+          HTMLAttributes: {
+            class: 'border-l-4 border-primary/30 pl-4 italic text-muted-foreground',
+          },
+        },
+        HTMLAttributes: {
+          class: 'prose prose-neutral dark:prose-invert max-w-none',
+        },
       }),
       CustomImage.configure({
         allowBase64: true,
@@ -1109,6 +1123,9 @@ export function TipTapEditor({ content, onChange }: TipTapEditorProps) {
       }),
       CustomCodeBlockLowlight.configure({
         lowlight: getLowlight(),
+        HTMLAttributes: {
+          class: 'code-block-wrapper',
+        },
       }),
     ],
     [CustomCodeBlockLowlight, CustomImage]
@@ -1116,7 +1133,7 @@ export function TipTapEditor({ content, onChange }: TipTapEditorProps) {
 
   const editor = useEditor({
     extensions,
-    content,
+    content: '',
     onUpdate: ({ editor: e }) => {
       onChange(e.getHTML());
       checkSlashCommand(e);
@@ -1156,9 +1173,17 @@ export function TipTapEditor({ content, onChange }: TipTapEditorProps) {
   });
 
   // Update editor content when prop changes (e.g., when navigating from AI Chat)
+  // Only update if content actually changed to avoid unnecessary re-renders
+  const initialContent = useRef<string | null>(null);
   useEffect(() => {
-    if (editor && content && editor.getHTML() !== content) {
-      editor.commands.setContent(content);
+    if (editor && content) {
+      const currentContent = editor.getHTML();
+      // Skip if content is the same or if editor already has content and new content is empty
+      if (initialContent.current !== content && (content !== '' || currentContent === '<p></p>')) {
+        initialContent.current = content;
+        // Use setContent with parseHTML options to properly parse AI-generated HTML
+        editor.commands.setContent(content, { parseHTML: true });
+      }
     }
   }, [content, editor]);
 

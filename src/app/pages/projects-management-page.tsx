@@ -34,9 +34,11 @@ import {
   createProjectInDb,
   updateProjectInDb,
   deleteProjectInDb,
+  clearCacheFor,
 } from '../lib/db';
 import type { Project } from '../lib/types';
 import { toast } from 'sonner';
+import { playSuccessSound, playErrorSound } from '../lib/sounds';
 
 const categoryColors: Record<string, string> = {
   'Web Development': 'bg-blue-500/10 text-blue-600',
@@ -59,7 +61,8 @@ export function ProjectsManagementPage() {
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
   const refresh = useCallback(async () => {
-    const data = await getAllProjectsFromDb();
+    clearCacheFor('projects');
+    const data = await getAllProjectsFromDb(true);
     setProjects(data);
   }, []);
 
@@ -78,15 +81,19 @@ export function ProjectsManagementPage() {
         const result = await updateProjectInDb(editingProj.id, data);
         if (result) {
           toast.success('Project updated!');
+          playSuccessSound();
         } else {
           toast.error('Failed to update project');
+          playErrorSound();
         }
       } else {
         const result = await createProjectInDb(data);
         if (result) {
           toast.success('Project added!');
+          playSuccessSound();
         } else {
           toast.error('Failed to add project');
+          playErrorSound();
         }
       }
       setEditingProj(null);
@@ -115,8 +122,10 @@ export function ProjectsManagementPage() {
       const result = await deleteProjectInDb(deletingId);
       if (result) {
         toast.success('Project deleted.');
+        playSuccessSound();
       } else {
         toast.error('Failed to delete project');
+        playErrorSound();
       }
       setDeleteDialogOpen(false);
       setDeletingId(null);

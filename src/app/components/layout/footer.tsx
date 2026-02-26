@@ -1,39 +1,59 @@
 import { Github, Linkedin, Mail, Heart } from 'lucide-react';
 import { FaInstagram } from 'react-icons/fa';
+import { FaWhatsapp } from 'react-icons/fa';
 import { Link } from 'react-router';
 import { motion } from 'motion/react';
 import logo from '../../../assets/Logo_Ravnx.png';
-
-const socialLinks = [
-  {
-    href: 'https://github.com/robet31',
-    icon: Github,
-    label: 'GitHub',
-  },
-  {
-    href: 'https://www.linkedin.com/in/arraffi-abqori-nur-azizi/',
-    icon: Linkedin,
-    label: 'LinkedIn',
-  },
-  {
-    href: 'https://www.instagram.com/ravnxx_/',
-    icon: FaInstagram,
-    label: 'Instagram',
-  },
-  {
-    href: 'mailto:api@portfolio.dev',
-    icon: Mail,
-    label: 'Email',
-  },
-];
-
-const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/blog', label: 'Blog' },
-  { href: '/daily-logs', label: 'Daily Logs' },
-];
+import { getSettingsFromDb, type SiteSettings } from '../../lib/db';
+import { useEffect, useState } from 'react';
 
 export function Footer() {
+  const [settings, setSettings] = useState<SiteSettings | null>(null);
+
+  useEffect(() => {
+    getSettingsFromDb().then(setSettings);
+  }, []);
+
+  const phoneNumber = settings?.whatsapp_number || '6281515450611';
+  const whatsappMessage = settings?.whatsapp_message || 'Hai min, aku interested sama project kamu nih. Bisa jelasin lebih lanjut?';
+  const email = settings?.email || 'api@portfolio.dev';
+  const siteName = settings?.site_name || 'Ravnx';
+  const siteDescription = settings?.site_description || 'Mahasiswa Sistem Informasi, AI Enthusiast dan Data Enthusiast.';
+  const copyright = settings?.footer_copyright || '© 2026 Ravnx. Built with ❤️ & code.';
+
+  const socialLinks = [
+    {
+      href: settings?.github_url || 'https://github.com/robet31',
+      icon: Github,
+      label: 'GitHub',
+    },
+    {
+      href: settings?.linkedin_url || 'https://www.linkedin.com/in/arraffi-abqori-nur-azizi/',
+      icon: Linkedin,
+      label: 'LinkedIn',
+    },
+    {
+      href: settings?.instagram_url || 'https://www.instagram.com/ravnxx_/',
+      icon: FaInstagram,
+      label: 'Instagram',
+    },
+    {
+      href: `https://wa.me/${phoneNumber}?text=${encodeURIComponent(whatsappMessage)}`,
+      icon: FaWhatsapp,
+      label: 'WhatsApp',
+    },
+    {
+      href: `mailto:${email}`,
+      icon: Mail,
+      label: 'Email',
+    },
+  ];
+
+  const navLinks = [
+    { href: '/', label: settings?.nav_home || 'Home' },
+    { href: '/blog', label: settings?.nav_blog || 'Blog' },
+    { href: '/daily-logs', label: settings?.nav_daily_logs || 'Daily Logs' },
+  ];
   return (
     <footer className="border-t border-border bg-card/50">
       <div className="max-w-6xl mx-auto px-6 sm:px-8 py-12 md:py-16">
@@ -47,9 +67,9 @@ export function Footer() {
             transition={{ duration: 0.5 }}
           >
             <Link to="/" className="inline-flex items-center gap-2 mb-5">
-              <img src={logo} alt="Ravnx" className="h-8 w-auto object-contain" />
+              <img src={settings?.profile_image || logo} alt={siteName} className="h-8 w-auto object-contain rounded-full" onError={(e) => { (e.target as HTMLImageElement).src = logo; }} />
               <span className="text-foreground tracking-tight" style={{ fontSize: '1.35rem', fontWeight: 700 }}>
-                Ravnx<span className="text-primary">.</span>
+                {siteName}<span className="text-primary">.</span>
               </span>
             </Link>
           </motion.div>
@@ -62,7 +82,7 @@ export function Footer() {
             transition={{ duration: 0.5, delay: 0.05 }}
             className="text-muted-foreground text-sm leading-relaxed max-w-[300px] mb-7"
           >
-            Mahasiswa Sistem Informasi, AI Enthusiast dan Data Enthusiast yang mendokumentasikan perjalanan belajar melalui kode dan tulisan.
+            {siteDescription}
           </motion.p>
 
           {/* Nav links — horizontal pill row */}
@@ -121,7 +141,7 @@ export function Footer() {
             className="pt-6 border-t border-border/60 w-full"
           >
             <p className="text-muted-foreground text-xs flex items-center justify-center gap-1">
-              © 2026 Ravnx. Built with <Heart className="w-3 h-3 text-destructive/60 inline" /> & code.
+              {copyright} <Heart className="w-3 h-3 text-destructive/60 inline" />
             </p>
           </motion.div>
         </div>
@@ -138,13 +158,13 @@ export function Footer() {
             {/* Brand column */}
             <div>
               <Link to="/" className="inline-flex items-center gap-2 mb-5">
-                <img src={logo} alt="Ravnx" className="h-10 w-auto object-contain" />
+                <img src={settings?.profile_image || logo} alt={siteName} className="h-10 w-auto object-contain rounded-full" onError={(e) => { (e.target as HTMLImageElement).src = logo; }} />
                 <span className="text-foreground tracking-tight" style={{ fontSize: '1.35rem', fontWeight: 700 }}>
-                  Ravnx<span className="text-primary">.</span>
+                  {siteName}<span className="text-primary">.</span>
                 </span>
               </Link>
               <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
-                Mahasiswa Sistem Informasi, AI Enthusiast dan Data Enthusiast. Sangat tertarik dalam mengeksplorasi Data Mining, Data Engineering, Visualisasi Data, AI Engineering dan senang belajar tentang hal baru lainnya.
+                {siteDescription}
               </p>
             </div>
 
@@ -187,7 +207,7 @@ export function Footer() {
                   );
                 })}
               </div>
-              <p className="text-muted-foreground/60 text-xs mt-5">ravnx@portfolio.dev</p>
+              <p className="text-muted-foreground/60 text-xs mt-5">{email}</p>
             </div>
           </motion.div>
 
@@ -200,7 +220,7 @@ export function Footer() {
             className="mt-12 pt-6 border-t border-border flex items-center justify-between"
           >
             <p className="text-muted-foreground text-sm flex items-center gap-1.5">
-              © 2026 Ravnx. Built with <Heart className="w-3 h-3 text-destructive/60" /> & code.
+              {copyright} <Heart className="w-3 h-3 text-destructive/60" />
             </p>
             <p className="text-muted-foreground/50 text-xs">
               All rights reserved.

@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import { PenSquare } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { ArticleTable } from '../components/dashboard/article-table';
-import { getAllPostsFromDb } from '../lib/db';
+import { getAllPostsFromDb, clearCacheFor } from '../lib/db';
 import type { Post } from '../lib/types';
 
 export function PostsPage() {
@@ -12,7 +12,8 @@ export function PostsPage() {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const data = await getAllPostsFromDb();
+    clearCacheFor('posts');
+    const data = await getAllPostsFromDb(true);
     setPosts(data);
   }, []);
 
