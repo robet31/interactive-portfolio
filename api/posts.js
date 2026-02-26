@@ -13,15 +13,15 @@ export async function GET(request) {
       return Response.json(result.rows);
     }
     
-    // GET /api/posts/published - published only
-    if (path === '/api/posts/published') {
-      const result = await pool.query(
+    // GET /api/posts/published - if (path === '/api/posts/published') {
+      const result = await published only
+    pool.query(
         "SELECT * FROM posts WHERE status = 'published' ORDER BY created_at DESC"
       );
       return Response.json(result.rows);
     }
-    
-    // GET /api/posts/:slug - single post
+ /api/posts/:    
+    // GETslug - single post
     const slugMatch = path.match(/^\/api\/posts\/(.+)$/);
     if (slugMatch) {
       const slug = slugMatch[1];
@@ -48,15 +48,69 @@ export async function POST(request) {
       return Response.json({ error: 'Title is required' }, { status: 400 });
     }
     
+    const postSlug = slug || title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    
     const result = await pool.query(
       `INSERT INTO posts (title, slug, content, excerpt, cover_image_url, category, status, reading_time, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
        RETURNING *`,
-      [title, slug || title.toLowerCase().replace(/\s+/g, '-'), content || '', excerpt || '', cover_image_url, category || 'Jurnal & Catatan', status || 'draft', reading_time || 1]
+      [title, postSlug, content || '', excerpt || '', cover_image_url, category || 'Jurnal & Catatan', status || 'draft', reading_time || 1]
     );
     return Response.json(result.rows[0]);
   } catch (error) {
     console.error('Error creating post:', error);
-    return Response.json({ error: 'Failed to create post' }, { status: 500 });
+    return Response.json({ error: 'Failed to create post: ' + error.message }, { status: 500 });
+  }
+}
+
+export async function PUT(request) {
+  try {
+    const url = new URL(request.url);
+    const path = url.pathname;
+    const idMatch = path.match(/^\/api\/posts\/(\d+)$/);
+    
+    if (!idMatch) {
+      return Response.json({ error: 'Invalid post ID' }, { status: 400 });
+    }
+    
+    const id = idMatch[1];
+    const body = await request.json();
+    const { title, slug, content, excerpt, cover_image_url, category, status, reading_time } = body;
+    
+    const postSlug = slug || (title ? title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') : null);
+    
+    const result = await pool.query(
+      `UPDATE posts SET title = $1, slug = $2, content = $3, excerpt = $4, cover_image_url = $5, category = $6, status = $7, reading_time = $8, updated_at = NOW()
+       WHERE id = $9 RETURNING *`,
+      [title, postSlug, content || '', excerpt || '', cover_image_url, category, status, reading_time, id]
+    );
+    
+    if (result.rows.length === 0) {
+      return Response.json({ error: 'Post not found' }, { status: 404 });
+    }
+    
+    return Response.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating post:', error);
+    return Response.json({ error: 'Failed to update post: ' + error.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    const url = new URL(request.url);
+    const path = url.pathname;
+    const idMatch = path.match(/^\/api\/posts\/(\d+)$/);
+    
+    if (!idMatch) {
+      return Response.json({ error: 'Invalid post ID' }, { status: 400 });
+    }
+    
+    const id = idMatch[1];
+    await pool.query('DELETE FROM posts WHERE id = $1', [id]);
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting post:', error);
+    return Response.json({ error: 'Failed to delete post' }, { status: 500 });
   }
 }
