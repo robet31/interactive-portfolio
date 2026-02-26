@@ -5,28 +5,38 @@ export const dynamic = 'force-dynamic';
 export async function GET(request) {
   const url = new URL(request.url);
   const path = url.pathname;
-  
-  // Only handle /api/certifications
-  if (path !== '/api/certifications') {
-    return Response.json({ error: 'Not found' }, { status: 404 });
-  }
-  
+  const id = url.searchParams.get('id');
+
   try {
-    const result = await pool.query(
-      'SELECT id, name, organization, issue_date, expiry_date, credential_id, credential_url, image, skills FROM certifications'
-    );
-    const certifications = result.rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      organization: row.organization,
-      issueDate: row.issue_date,
-      expiryDate: row.expiry_date,
-      credentialId: row.credential_id,
-      credentialUrl: row.credential_url,
-      image: row.image,
-      skills: row.skills || [],
-    }));
-    return Response.json(certifications);
+    // GET /api/certifications - all certifications
+    if (path === '/api/certifications' && !id) {
+      const result = await pool.query(
+        'SELECT id, name, organization, issue_date, expiry_date, credential_id, credential_url, image, skills FROM certifications'
+      );
+      const certifications = result.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        organization: row.organization,
+        issueDate: row.issue_date,
+        expiryDate: row.expiry_date,
+        credentialId: row.credential_id,
+        credentialUrl: row.credential_url,
+        image: row.image,
+        skills: row.skills || [],
+      }));
+      return Response.json(certifications);
+    }
+    
+    // GET /api/certifications?id=xxx - single certification
+    if (path === '/api/certifications' && id) {
+      const result = await pool.query('SELECT * FROM certifications WHERE id = $1', [id]);
+      if (result.rows.length === 0) {
+        return Response.json({ error: 'Certification not found' }, { status: 404 });
+      }
+      return Response.json(result.rows[0]);
+    }
+    
+    return Response.json({ error: 'Not found' }, { status: 404 });
   } catch (error) {
     console.error('Error fetching certifications:', error);
     return Response.json({ error: 'Failed to fetch certifications' }, { status: 500 });
@@ -38,29 +48,31 @@ export async function POST(request) {
     const body = await request.json();
     const { name, organization, issue_date, expiry_date, credential_id, credential_url, image, skills } = body;
     
+    if (!name) {
+      return Response.json({ error: 'Name is required' }, { status: 400 });
+    }
+    
     const result = await pool.query(
       `INSERT INTO certifications (name, organization, issue_date, expiry_date, credential_id, credential_url, image, skills)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [name, organization, issue_date, expiry_date, credential_id, credential_url, image, skills || []]
+      [name, organization || '', issue_date || null, expiry_date || null, credential_id || '', credential_url || '', image || null, skills || []]
     );
     return Response.json(result.rows[0]);
   } catch (error) {
     console.error('Error creating certification:', error);
-    return Response.json({ error: 'Failed to create certification' }, { status: 500 });
+    return Response.json({ error: 'Failed to create certification: ' + error.message }, { status: 500 });
   }
 }
 
 export async function PUT(request) {
   try {
     const url = new URL(request.url);
-    const path = url.pathname;
-    const idMatch = path.match(/^\/api\/certifications\/(\d+)$/);
+    const id = url.searchParams.get('id');
     
-    if (!idMatch) {
-      return Response.json({ error: 'Invalid certification ID' }, { status: 400 });
+    if (!id) {
+      return Response.json({ error: 'Certification ID is required (use ?id=xxx)' }, { status: 400 });
     }
     
-    const id = idMatch[1];
     const body = await request.json();
     const { name, organization, issue_date, expiry_date, credential_id, credential_url, image, skills } = body;
     
@@ -77,21 +89,19 @@ export async function PUT(request) {
     return Response.json(result.rows[0]);
   } catch (error) {
     console.error('Error updating certification:', error);
-    return Response.json({ error: 'Failed to update certification' }, { status: 500 });
+    return Response.json({ error: 'Failed to update certification: ' + error.message }, { status: 500 });
   }
 }
 
 export async function DELETE(request) {
   try {
     const url = new URL(request.url);
-    const path = url.pathname;
-    const idMatch = path.match(/^\/api\/certifications\/(\d+)$/);
+    const id = url.searchParams.get('id');
     
-    if (!idMatch) {
-      return Response.json({ error: 'Invalid certification ID' }, { status: 400 });
+    if (!id) {
+      return Response.json({ error: 'Certification ID is required (use ?id=xxx)' }, { status: 400 });
     }
     
-    const id = idMatch[1];
     await pool.query('DELETE FROM certifications WHERE id = $1', [id]);
     return Response.json({ success: true });
   } catch (error) {

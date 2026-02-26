@@ -316,7 +316,7 @@ export async function createExperienceInDb(data: Partial<Experience>): Promise<E
 
 export async function updateExperienceInDb(id: string, data: Partial<Experience>): Promise<Experience | null> {
   try {
-    const result = await fetchFromApi<Experience>(`/experiences/${id}`, {
+    const result = await fetchFromApi<Experience>(`/experiences?id=${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -329,7 +329,7 @@ export async function updateExperienceInDb(id: string, data: Partial<Experience>
 
 export async function deleteExperienceInDb(id: string): Promise<boolean> {
   try {
-    await fetchFromApi(`/experiences/${id}`, { method: 'DELETE' });
+    await fetchFromApi(`/experiences?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     return true;
   } catch (error) {
     console.error('Error deleting experience:', error);
@@ -353,7 +353,7 @@ export async function createProjectInDb(data: Partial<Project>): Promise<Project
 
 export async function updateProjectInDb(id: string, data: Partial<Project>): Promise<Project | null> {
   try {
-    const result = await fetchFromApi<Project>(`/projects/${id}`, {
+    const result = await fetchFromApi<Project>(`/projects?id=${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -366,7 +366,7 @@ export async function updateProjectInDb(id: string, data: Partial<Project>): Pro
 
 export async function deleteProjectInDb(id: string): Promise<boolean> {
   try {
-    await fetchFromApi(`/projects/${id}`, { method: 'DELETE' });
+    await fetchFromApi(`/projects?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     return true;
   } catch (error) {
     console.error('Error deleting project:', error);
@@ -390,7 +390,7 @@ export async function createCertificationInDb(data: Partial<Certification>): Pro
 
 export async function updateCertificationInDb(id: string, data: Partial<Certification>): Promise<Certification | null> {
   try {
-    const result = await fetchFromApi<Certification>(`/certifications/${id}`, {
+    const result = await fetchFromApi<Certification>(`/certifications?id=${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -403,7 +403,7 @@ export async function updateCertificationInDb(id: string, data: Partial<Certific
 
 export async function deleteCertificationInDb(id: string): Promise<boolean> {
   try {
-    await fetchFromApi(`/certifications/${id}`, { method: 'DELETE' });
+    await fetchFromApi(`/certifications?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     return true;
   } catch (error) {
     console.error('Error deleting certification:', error);
